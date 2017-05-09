@@ -1,0 +1,9 @@
+def foo(a){
+	if (a < 2){
+		1;
+	} else {
+		foo(a - 1) + foo(a - 2);
+	};
+};
+
+print foo(12);

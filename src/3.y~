@@ -1,0 +1,38 @@
+%{
+    #include "include/model.h"
+    #include <stdio.h>
+    #define YYSTYPE Object
+	extern int yylineno;
+	extern int yylex();
+	
+	void yyerror(char *s) {
+		fprintf (stderr, "%s\n", s);
+	}
+	Scope scope;
+%}
+
+%token NUM
+
+%%
+
+EVALUATE: EXPR ';'          { printf("=%d\n", dynamic_cast<Number*>($$.evaluate(scope))->get_val()); }
+		| EVALUATE EXPR ';' { printf("=%d\n", dynamic_cast<Number*>($2.evaluate(scope))->get_val()); }
+;
+
+EXPR:    TERM
+        | EXPR '+' TERM { $$ = BinaryOperation(&$1, "+", &$3); }
+        | EXPR '-' TERM { $$ = BinaryOperation(&$1, "-", &$3); }
+;
+
+BRACE:   '(' EXPR ')' { $$ = $2; }
+;
+
+TERM:    NUM
+		| BRACE
+        | TERM '*' NUM  { $$ = BinaryOperation(&$1, "*", &$3); }
+        | TERM '/' NUM  { $$ = BinaryOperation(&$1, "/", &$3); }
+        | TERM '*' BRACE  { $$ = BinaryOperation(&$1, "*", &$3); }
+        | TERM '/' BRACE  { $$ = BinaryOperation(&$1, "/", &$3); }
+;
+
+%%
