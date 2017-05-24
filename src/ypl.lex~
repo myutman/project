@@ -2,7 +2,7 @@
 	#include <string>
 	#include "model.h"
 	#define YYSTYPE YYSTYPE_t
-	#include "ypl.tab.h"
+	#include "../ypl.tab.h"
 	void yyerror(char* s);
 %}
 
