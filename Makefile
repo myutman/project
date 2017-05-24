@@ -25,11 +25,17 @@ $(BINDIR)/lex.yy.o: lex.yy.c
 
 $(SRCDIR)/main.cpp: ypl.tab.c
 
-ypl.tab.c: $(SRCDIR)/ypl.y
+ypl.tab.c: bison $(SRCDIR)/ypl.y
 	bison -d $(SRCDIR)/ypl.y
 
-lex.yy.c: $(SRCDIR)/ypl.lex
+bison:
+	sudo apt-get install bison
+
+lex.yy.c: flex $(SRCDIR)/ypl.lex
 	lex $(SRCDIR)/ypl.lex
+
+flex:
+	sudo apt-get install flex
 
 include $(wildcard $(BINDIR)/*.d)
 
@@ -37,6 +43,6 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 clean:
-	rm -rf $(BINDIR) $(EXE)
+	rm -rf $(BINDIR) $(EXE) lex.yy.c ypl.tab.c ypl.tab.h
 
 .PHONY: clean all
