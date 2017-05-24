@@ -1,11 +1,12 @@
 %{
 	#include <string>
-	#define YYSTYPE std::string
+	#include "model.h"
+	#define YYSTYPE YYSTYPE_t
 	#include "ypl.tab.h"
 	void yyerror(char* s);
 %}
 
-
+%option yylineno
 %option noyywrap
 
 %%
@@ -22,8 +23,8 @@ read			return READ;
 [<]=			return LE;
 >=				return GE;
 !=				return NE;
-[0-9]+			{ yylval = yytext; return NUM; }
-[a-zA-Z_][a-zA-Z0-9_]* { yylval = yytext; return ID; }
+[0-9]+			{ yylval.str = yytext; return NUM; }
+[a-zA-Z_][a-zA-Z0-9_]* { yylval.str = yytext; return ID; }
 [ \t\r\n]		; // whitespace
 [-{};()=<>+*/!,] { return *yytext; }
 .				yyerror("Invalid character");
