@@ -17,7 +17,7 @@ $(BINDIR)/main.o: $(SRCDIR)/main.cpp ypl.tab.h
 $(BINDIR)/model.o: $(SRCDIR)/model.cpp
 	$(CXX) $(CXXFLAGS) -c -MMD -o $@ $<
 
-$(BINDIR)/ypl.tab.o: ypl.tab.c
+$(BINDIR)/ypl.tab.o: ypl.tab.c model.h
 	$(CXX) $(CXXFLAGS) -c -MMD -o $@ $<
 
 $(BINDIR)/lex.yy.o: lex.yy.c ypl.tab.h

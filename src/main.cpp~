@@ -4,6 +4,6 @@
 #include <cassert>
 
 int main(int argc, char* argv[]){
-    freopen(argv[0], "rt", stdin);
+    freopen(argv[1], "rt", stdin);
     return yyparse();
 }
