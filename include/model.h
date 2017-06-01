@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 using std::cin;
 using std::cout;
@@ -14,10 +15,13 @@ using std::vector;
 using std::endl;
 using std::cerr;
 
+extern std::ofstream out;
+
 class Scope;
 
 class Object{
 public:
+	virtual void gen_code(int tabs, bool ret) {}
 	virtual Object *evaluate(Scope &scope){ return this; }
 	virtual ~Object() {}
 };
@@ -48,6 +52,7 @@ class Number: public Object{
 public:
 	Number(int value=0);
 	int get_val() const {return value_; }
+	void gen_code(int tabs, bool ret);
 	
 private:
 	int value_;
@@ -57,7 +62,11 @@ class Function: public Object{
 public:
 	Function(vector<string> *args, vector<Object*> *body);
 	Object *evaluate(Scope &scope);
-	string get_args(size_t i){ return (*args_)[i]; }
+	int args_size(){ return args_->size(); }
+	string get_args(size_t i){ return (*args_)[i]; } 
+	int body_size(){ return body_->size(); }
+	Object* get_body(size_t i){ return (*body_)[i]; } 
+
 private:
 	vector<string> *args_;
 	vector<Object*> *body_;
@@ -67,7 +76,8 @@ class FunctionDefinition: public Object{
 public:
 	FunctionDefinition(string name, Function *function);
 	Object *evaluate(Scope &scope);
-
+	void gen_code(int tabs, bool ret);
+	
 private:
 	string name_;
 	Function *function_;
@@ -77,7 +87,8 @@ class Conditional: public Object{
 public:
 	Conditional(Object *condition, vector<Object*> *if_true, vector<Object*> *if_false = NULL);
 	Object *evaluate(Scope &scope);
-
+	void gen_code(int tabs, bool ret);
+	
 private:
 	Object *condition_;
 	vector<Object*> *if_true_, *if_false_;
@@ -87,6 +98,7 @@ class Print: public Object{
 public:
 	Print(Object *expr);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 	
 private:
 	Object *expr_;
@@ -96,6 +108,7 @@ class Read: public Object{
 public:	
 	Read(string name);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 
 private:
 	string name_;
@@ -105,6 +118,7 @@ class FunctionCall: public Object{
 public:
 	FunctionCall(Object *fun_expr, vector<Object*> *args);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 	
 private:
 	Object *fun_expr_;
@@ -115,6 +129,7 @@ class Reference: public Object{
 public:	
 	Reference(string name);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 
 private:
 	string name_;
@@ -124,6 +139,7 @@ class BinaryOperation: public Object{
 public:
 	BinaryOperation(Object *lhs, string op, Object *rhs);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 	
 private:
 	Object *lhs_, *rhs_;
@@ -134,6 +150,7 @@ class UnaryOperation: public Object{
 public:
 	UnaryOperation(string op, Object *expr);
 	Object *evaluate(Scope &scope);
+	void gen_code(int tabs, bool ret);
 	
 private:
 	string op_;

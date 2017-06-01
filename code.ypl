@@ -6,5 +6,5 @@ def fact(a){
 		1;
 	};
 };
-print fact(0);
-print fact(5);
+read a;
+print fact(a);

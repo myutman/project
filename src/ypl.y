@@ -1,6 +1,7 @@
 %{
 	#include "model.h"
 
+	//extern std::ofstream out;
 	extern int yylineno;
 	extern int yylex();
 	Scope mainloop;
@@ -26,7 +27,14 @@
 %left '*' '/' '%'
 
 %%
-PROGRAM:	OPS												{ for (auto v: *$1) v->evaluate(mainloop); }
+PROGRAM:	OPS												{ out << "#include \"stdio.h\"\nint main() {\n";
+																for (auto v: *$1){
+																	v->gen_code(1, 0);
+																	out << ";\n";	
+																}
+																out << "\treturn 0;\n}\n";
+																//for (auto v: *$1) v->evaluate(mainloop); }
+															}
 ;
 
 OPS:		/* empty */										{ $$ = new vector<Object*>(); }
