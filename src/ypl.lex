@@ -26,7 +26,7 @@ read			return READ;
 [0-9]+			{ yylval.str = yytext; return NUM; }
 [a-zA-Z_][a-zA-Z0-9_]* { yylval.str = yytext; return ID; }
 [ \t\r\n]		; // whitespace
-[-{};()=<>+*/!,] { return *yytext; }
+[-{};()=<>+*/!,%%] { return *yytext; }
 .				yyerror("Invalid character");
 
 %%
