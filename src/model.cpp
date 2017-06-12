@@ -16,9 +16,9 @@ Scope::~Scope(){
 
 Object* &Scope::operator[](string s){
 	if (!dictionary_.count(s)){
-		if (parent_ != NULL){
+		if (parent_ != nullptr){
 			Object* &ob = (*parent_)[s];
-			if (ob != NULL)
+			if (ob != nullptr)
 				return ob;
 		}
 	}
@@ -36,7 +36,11 @@ void Number::gen_code(int tabs, bool ret){
 	out << value_;
 }
 
-Function::Function(vector<string> *args, vector<Object*> *body):args_(args), body_(body) {}
+Value *Number::gen_IR(Module *mod){
+	return ConstantInt::get(TheContext, value_);
+}
+
+FunctionAST::FunctionAST(vector<string> *args, vector<Object*> *body):args_(args), body_(body) {}
 
 /*Function::~Function(){
 	delete args_;
@@ -45,14 +49,21 @@ Function::Function(vector<string> *args, vector<Object*> *body):args_(args), bod
 	delete body_;
 }*/
 
-Object *Function::evaluate(Scope &scope){
-	Object *tmp = NULL;
+Object *FunctionAST::evaluate(Scope &scope){
+	Object *tmp = nullptr;
 	for (auto var: *body_)
 		tmp = var->evaluate(scope);
 	return tmp;
 }
 
-FunctionDefinition::FunctionDefinition(string name, Function *function):name_(name), function_(function){}
+Value *FunctionAST::gen_IR(Module* mod){
+	Value* tmp = nullptr;
+	for (auto var: *body_)
+		tmp = var->gen_IR(mod);
+	return tmp;
+}
+
+FunctionDefinition::FunctionDefinition(string name, FunctionAST *function):name_(name), function_(function){}
 
 void FunctionDefinition::gen_code(int tabs, bool ret){
 	print_tabs(tabs);
@@ -71,6 +82,23 @@ void FunctionDefinition::gen_code(int tabs, bool ret){
 	out << "}";
 }
 
+Value *FunctionDefinition::gen_IR(Module* mod){
+	vector<Type *> vt;
+	for (int i = 0; i < function_->args_size(); i++){
+		vt.push_back(Type::getInt32Ty(TheContext));
+	}
+	ArrayRef<Type *> argsRef(vt);
+	FunctionType *funcType = FunctionType::get(Type::getInt32Ty(TheContext), argsRef, false);
+	Function *func = Function::Create(funcType, GlobalValue::ExternalLinkage, name_, mod);
+	Function::arg_iterator args = func->arg_begin();
+	for (int i = 0; i < function_->args_size(); i++){
+		(args++)->setName(function_->get_args(i));
+	}
+	BasicBlock *block = BasicBlock::Create(TheContext, "entry", func);
+	function_->gen_IR(block);
+	return func;
+}
+
 /*FunctionDefinition::~FunctionDefinition(){
 	delete function_;
 }*/
@@ -87,7 +115,7 @@ Conditional::Conditional(Object *condition, vector<Object*> *if_true, vector<Obj
 	for (auto var: *if_true_)
 		delete var;
 	delete if_true_;
-	if (if_false_ != NULL){
+	if (if_false_ != nullptr){
 		for (auto var: *if_false_)
 			delete var;
 		delete if_false_;
@@ -97,7 +125,7 @@ Conditional::Conditional(Object *condition, vector<Object*> *if_true, vector<Obj
 Object *Conditional::evaluate(Scope &scope){	
 	Number *nm = dynamic_cast<Number*>(condition_->evaluate(scope));
 	vector<Object*> *branch = nm->get_val() ? if_true_ : if_false_;
-	Object *tmp = NULL;
+	Object *tmp = nullptr;
 	for (auto var: *branch)
 		tmp = var->evaluate(scope);
 	return tmp;
@@ -113,7 +141,7 @@ void Conditional::gen_code(int tabs, bool ret){
 		obj->gen_code(tabs + 1, ret && (i == if_true_->size() - 1));
 		out << ";\n";
 	}
-	if (if_false_ != NULL){
+	if (if_false_ != nullptr){
 		print_tabs(tabs);
 		out << "} else {\n";
 		for (int i = 0; i < if_false_->size(); i++){
@@ -124,6 +152,21 @@ void Conditional::gen_code(int tabs, bool ret){
 	}
 	print_tabs(tabs);
 	out << "}";
+}
+
+Value *Conditional::gen_IR(Module* mod){
+	BasicBlock* if_block = BasicBlock::Create(TheContext, "name", mod->getParent());
+	if (if_false_ != nullptr){
+		for (auto var: *if_true_)
+			var->gen_IR(if_block);
+	}
+	BasicBlock* else_block = BasicBlock::Create(TheContext, "name", mod->getParent());
+	if (if_false_ != nullptr){
+		for (auto var: *if_false_)
+			var->gen_IR(else_block);
+	}
+	BranchInst *br = BranchInst::Create(if_block, else_block, condition_->gen_IR(mod), mod);
+	return br;
 }
 
 Print::Print(Object *expr):expr_(expr){}
@@ -165,7 +208,7 @@ FunctionCall::FunctionCall(Object *fun_expr, vector<Object*> *args):fun_expr_(fu
 }*/
 
 Object *FunctionCall::evaluate(Scope &scope){
-	Function *function = dynamic_cast<Function*>(fun_expr_->evaluate(scope));
+	FunctionAST *function = dynamic_cast<Function*>(fun_expr_->evaluate(scope));
 	Scope *call_scope = new Scope(&scope);
 	for (size_t i = 0; i < args_->size(); i++){
 		string name = function->get_args(i);
@@ -185,6 +228,16 @@ void FunctionCall::gen_code(int tabs, bool ret){
 		if (i != args_->size() - 1) out << ", ";
 	}
 	out << ")";
+}
+
+Value *FunctionCall::gen_IR(Module *mod){
+	vector<Value *> vt;
+	for (auto val: *args_){
+		vt.push_back(val->gen_IR(mod));
+	}
+	ArrayRef<Value *> argRef = ArrayRef(vt);
+	CallInst ci = CallInst::Create(fun_expr->gen_IR(mod), argRef, "", mod);
+	return ci;
 }
 
 Reference::Reference(string name): name_(name){}
@@ -246,6 +299,41 @@ void BinaryOperation::gen_code(int tabs, bool ret){
 	out << ")";
 }
 
+Value *BinaryOperation::gen_IR(Module *mod){
+	Value *lhs = lhs_->gen_IR(mod);
+	Value *rhs = rhs_->gen_IR(mod);
+	if (op_ == "+")
+		return BinaryOperator::Create(Instruction::Add, lhs, rhs, "", mod);
+	if (op_ == "*")
+		return BinaryOperator::Create(Instruction::Mul, lhs, rhs, "", mod);
+	if (op_ == "-")
+		return BinaryOperator::Create(Instruction::Sub, lhs, rhs, "", mod);
+	if (op_ == "/")
+		return BinaryOperator::Create(Instruction::Div, lhs, rhs, "", mod);
+	if (op_ == "%") {
+		BinaryOperator *t1 = BinaryOperator::Create(Instruction::Sub, lhs, rhs, "", mod);
+		BinaryOperator *t2 = BinaryOperator::Create(Instruction::Mul, t1, rhs, "", mod);
+		return BinaryOperator::Create(Instruction::Sub, lhs, t2, "", mod);
+	}
+	if (op_ == "==")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_EQ, lhs, rhs, "", mod);
+	if (op_ == "!=")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_NEQ, lhs, rhs, "", mod);
+	if (op_ == "<")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_SLT, lhs, rhs, "", mod);
+	if (op_ == ">")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_SGT, lhs, rhs, "", mod);
+	if (op_ == "<=")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_SLE, lhs, rhs, "", mod);
+	if (op_ == ">=")
+		return CmpInst::Create(Instruction::OtherOpsBegin, CmpInst::ICMP_SGE, lhs, rhs, "", mod);
+	if (op_ == "||")
+		return BinaryOperator::Create(Instruction::Or, lhs, rhs, "", mod);
+	if (op_ == "&&")
+		return BinaryOperator::Create(Instruction::And, lhs, rhs, "", mod);
+	throw std::runtime_error("invalid kind of symbol");
+}
+
 UnaryOperation::UnaryOperation(string op, Object *expr):op_(op), expr_(expr){}
 
 /*UnaryOperation::~UnaryOperation(){
@@ -253,11 +341,11 @@ UnaryOperation::UnaryOperation(string op, Object *expr):op_(op), expr_(expr){}
 }*/
 
 Object *UnaryOperation::evaluate(Scope &scope){
-	Number *expr = dynamic_cast<Number*>(expr_->evaluate(scope));
+	Value *expr = expr_->gen_IR;
 	if (op_ == "!")
-		return new Number(!expr->get_val());
+		return BinaryOperator::Create(Instruction::Xor, ConstantInt::get(TheContext, 1), expr, "", mod);
 	if (op_ == "-")
-		return new Number(-expr->get_val());
+		return BinaryOperator::Create(Instruction::Sub, ConstantInt::get(TheContext, 0), expr, "", mod);
 	throw std::runtime_error("invalid kind of symbol");
 }
 
