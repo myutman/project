@@ -8,6 +8,9 @@ BINDIR = bin
 
 all: $(EXE)
 
+test: $(BINDIR) $(BINDIR)/model.o test.o
+	$(CXX) $(BINDIR)/model.o test.o -o test $(LDFLAGS)
+
 $(EXE): $(BINDIR) $(BINDIR)/main.o $(BINDIR)/model.o $(BINDIR)/ypl.tab.o $(BINDIR)/lex.yy.o
 	$(CXX) $(BINDIR)/main.o $(BINDIR)/model.o $(BINDIR)/ypl.tab.o $(BINDIR)/lex.yy.o -o $(EXE) $(LDFLAGS)
 	
@@ -31,6 +34,12 @@ ypl.tab.c: bison $(SRCDIR)/ypl.y
 ypl.tab.h: bison $(SRCDIR)/ypl.y
 	bison -d $(SRCDIR)/ypl.y
 
+test.o: test.cpp
+	$(CXX) $(CXXFLAGS) -c -MMD -o $@ $<
+
+test.cpp: unittest/test.h
+	cxxtestgen --error-printer -o test.cpp unittest/test.h
+
 bison:
 	sudo apt-get install bison
 
@@ -46,6 +55,6 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 clean:
-	rm -rf $(BINDIR) $(EXE) lex.yy.c ypl.tab.c ypl.tab.h
+	rm -rf $(BINDIR) $(EXE) lex.yy.c ypl.tab.c ypl.tab.h test.cpp test.o test
 
 .PHONY: clean all

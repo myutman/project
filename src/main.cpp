@@ -4,8 +4,6 @@
 #include <cassert>
 #include <cstring>
 
-std::ofstream out;
-
 int main(int argc, char* argv[]){
 	if (argc < 2){
 		cerr << "invalid number of arguments";

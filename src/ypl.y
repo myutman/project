@@ -42,7 +42,7 @@ OPS:		/* empty */										{ $$ = new vector<Object*>(); }
 ;
 
 OP:			EXPR											//default
-|			DEF ID '(' IDS ')' '{' OPS '}'					{ $$ = new FunctionDefinition($2, new Function($4, $7)); }
+|			DEF ID '(' IDS ')' '{' OPS '}'					{ $$ = new FunctionDefinition($2, new FunctionAST($4, $7)); }
 |			IF '(' EXPR ')' '{' OPS '}' ELSE '{' OPS '}'	{ $$ = new Conditional($3, $6, $10); }
 |			IF '(' EXPR ')' '{' OPS '}'						{ $$ = new Conditional($3, $6); }
 |			PRINT EXPR										{ $$ = new Print($2); }

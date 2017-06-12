@@ -58,9 +58,9 @@ private:
 	int value_;
 };
 
-class Function: public Object{
+class FunctionAST: public Object{
 public:
-	Function(vector<string> *args, vector<Object*> *body);
+	FunctionAST(vector<string> *args, vector<Object*> *body);
 	Object *evaluate(Scope &scope);
 	int args_size(){ return args_->size(); }
 	string get_args(size_t i){ return (*args_)[i]; } 
@@ -74,13 +74,13 @@ private:
 
 class FunctionDefinition: public Object{
 public:
-	FunctionDefinition(string name, Function *function);
+	FunctionDefinition(string name, FunctionAST *function);
 	Object *evaluate(Scope &scope);
 	void gen_code(int tabs, bool ret);
 	
 private:
 	string name_;
-	Function *function_;
+	FunctionAST *function_;
 };
 
 class Conditional: public Object{
