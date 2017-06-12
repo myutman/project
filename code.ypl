@@ -1,0 +1,10 @@
+def fact(a){
+	//print(a);
+	if (a){
+		fact(a-1)*(a);
+	} else {
+		1;
+	};
+};
+read a;
+print fact(a);
